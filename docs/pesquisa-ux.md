@@ -222,6 +222,18 @@ Teste moderado, 5 participantes por perfil, pensando em voz alta, no celular do 
 
 **Acessibilidade.** Contraste AA nos textos, estados nunca só por cor (sempre ícone e texto), foco visível, navegação por teclado com foco preso nos painéis, rótulos acima dos campos, campos com 16 px para o celular não dar zoom, respeito a "reduzir movimento" e tema claro e escuro.
 
+**Simplificação (segunda rodada).** Revisamos cada tela perguntando "qual é a próxima coisa que a pessoa quer fazer aqui?":
+
+| Antes | Depois | Por quê |
+|---|---|---|
+| Painel com 4 cartões, lista de atenção, agenda de 30 dias, chamados recentes e mural | Uma frase-resumo, uma lista "Para resolver" (agora e próximas semanas) com ação de um toque, agenda só da semana | A síndica decide o que fazer sem ler o painel inteiro |
+| Abrir um item para registrar a manutenção e preencher o formulário | "Feito hoje" direto na lista, com Desfazer | O caso mais comum vira um toque; o formulário completo continua disponível |
+| Detalhe do chamado com todos os controles abertos | Um botão para a próxima etapa, respostas prontas e gestão recolhida | Menos decisões por tela; o avançado aparece quando é preciso |
+| Título e descrição obrigatórios ao relatar | Só "O que você viu?"; a primeira frase vira o título | Um campo a menos para o morador |
+| 17 áreas comuns de uma vez | Áreas mais prováveis para o tipo de problema; o resto recolhido | Reconhecer em vez de procurar |
+| Todos os avisos na página inicial do morador | Só os não lidos; os lidos recolhidos | O que é novo fica evidente |
+| Ações espalhadas por telas | Botão Novo (e botão flutuante no celular) e busca global | Um lugar para começar qualquer tarefa |
+
 **Movimento com propósito.** Só onde comunica algo: o painel entra e sai pelo mesmo lado, o botão afunda ao toque, as janelas acesas da fachada na entrada. Animações curtas (até 300 ms) e nada que se repita sem parar.
 
 ---

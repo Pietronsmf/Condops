@@ -175,6 +175,28 @@
       ${sorted.length > 15 ? `<div class="panel-foot" style="border-top:0;padding-inline:0"><button class="link-btn" type="button" data-action="c-all">${ui.cAll ? 'Mostrar menos' : `Mostrar todos os ${sorted.length} lançamentos`}${icon(ui.cAll ? 'caret-up' : 'caret-down', 'icon-sm')}</button></div>` : ''}`;
   };
 
+  /** Para o condômino: o mesmo dado, contado em uma frase. */
+  const residentSummary = (months, list, total) => {
+    const budget = Store.s.condo.budgetMonthly;
+    const units = Store.s.condo.units;
+    const closed = months.filter((mo) => !mo.partial);
+    const last = closed[closed.length - 1] || months[months.length - 1];
+    const name = CO.MONTHS_LONG[CO.parse(last.key + '-01').getMonth()];
+    const diff = last.total - budget;
+    const byCat = {};
+    for (const e of last.list) byCat[e.category] = (byCat[e.category] || 0) + e.amount;
+    const top = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
+    return `
+      <section class="summary-card" aria-label="Resumo">
+        <p class="summary-big">Em ${name}, o condomínio gastou <strong>${CO.money0(last.total)}</strong>.</p>
+        <div class="summary-facts">
+          <span><strong>${CO.money0(last.total / units)}</strong> por apartamento</span>
+          <span class="${diff > 0 ? 'tone-crit-text' : 'tone-ok-text'}">${icon(diff > 0 ? 'trend-up' : 'check-circle')}<strong>${CO.money0(Math.abs(diff))}</strong> ${diff > 0 ? 'acima' : 'abaixo'} do orçamento</span>
+          ${top ? `<span>Maior parte: <strong>${esc(K.EXPENSE_CATS[top[0]].label.toLowerCase())}</strong></span>` : ''}
+        </div>
+      </section>`;
+  };
+
   CO.views.custos = {
     title: () => (Store.isSindico() ? 'Custos' : 'Transparência'),
     render() {
@@ -225,6 +247,7 @@
           </select>
         </div>
 
+        ${sind ? `
         <div class="stats">
           <div class="stat">
             <span class="stat-label">Total, ${periodTxt}</span>
@@ -246,7 +269,7 @@
             <span class="stat-value">${showBudget ? `${over}<small> de ${closed.length}</small>` : 'Não se aplica'}</span>
             <span class="stat-sub">Orçamento de ${CO.money0(budget)} por mês</span>
           </div>
-        </div>
+        </div>` : residentSummary(months, list, total)}
 
         <section class="panel" aria-labelledby="chart-title">
           <div class="panel-head"><h2 class="panel-title" id="chart-title">Gasto por mês${ui.cCat ? `: ${esc(K.EXPENSE_CATS[ui.cCat].short)}` : ''}</h2></div>

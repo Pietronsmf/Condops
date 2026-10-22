@@ -39,6 +39,24 @@
       </button>`;
   };
 
+  /** Linha do plano com o atalho "Feito hoje" para o que vence nos próximos 30 dias. */
+  const planItem = (p) => {
+    const st = Store.planStatus(p);
+    const quick = st.key !== 'ok'
+      ? `<span class="row-side"><button class="btn btn-secondary btn-sm" type="button" data-action="plan-done" data-id="${p.id}">${icon('check')}Feito hoje</button></span>`
+      : '';
+    return `<li class="${quick ? 'row-wrap' : ''}">${planRow(p)}${quick}</li>`;
+  };
+
+  CO.actions['plan-done'] = (el) => {
+    const p = Store.plan(el.dataset.id);
+    const cost = p.covered ? 0 : p.estCost || 0;
+    CO.animateOut(el.closest('li'), () => {
+      const next = Store.registerExecution(p.id, { date: CO.iso(CO.today()), cost, supplierId: p.supplierId, note: '', toExpense: true });
+      CO.done(`Registrado como feito hoje${cost ? `, ${CO.money(cost)} em Custos` : ''}. Próxima em ${CO.date(next, { year: true })}.`);
+    });
+  };
+
   const groups = () => {
     const plans = Store.plansSorted();
     const late = plans.filter((p) => Store.planStatus(p).key === 'late');
@@ -51,7 +69,7 @@
     list.length
       ? `<section class="panel" aria-label="${esc(title)}">
           <div class="panel-head"><h2 class="panel-title">${esc(title)} <span class="count">${list.length}</span></h2>${note || ''}</div>
-          <ul class="list">${list.map((p) => `<li>${planRow(p)}</li>`).join('')}</ul>
+          <ul class="list">${list.map(planItem).join('')}</ul>
         </section>`
       : '';
 
@@ -90,7 +108,7 @@
       } else {
         const list = { atrasadas: g.late, proximas: g.next30, emdia: g.later }[ui.mFilter];
         body = list.length
-          ? `<div class="panel"><ul class="list">${list.map((p) => `<li>${planRow(p)}</li>`).join('')}</ul></div>`
+          ? `<div class="panel"><ul class="list">${list.map(planItem).join('')}</ul></div>`
           : `<div class="panel">${CO.empty({ title: ui.mFilter === 'atrasadas' ? 'Nenhuma manutenção atrasada' : 'Nada neste período', text: 'Bom sinal. Confira o plano completo para ver o que vem depois.' })}</div>`;
       }
       return `

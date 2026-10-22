@@ -19,17 +19,18 @@ Na tela inicial, escolha entrar como **síndica (Márcia Ribeiro)** ou como **co
 ## O que cada perfil faz
 
 ### Síndico
-- **Início:** indicadores do prédio, lista "Precisa de atenção" (documentos vencidos, manutenções atrasadas, chamados urgentes sem retorno), agenda dos próximos 30 dias e mural de avisos com contagem de leitura.
-- **Chamados:** lista ou quadro por etapa, busca, filtros, urgência, fornecedor, equipamento, orçamentos com aprovação, atualizações públicas ou internas e fechamento com custo.
-- **Manutenções:** plano preventivo no espírito da NBR 5674 (o que, a cada quanto tempo, quem faz), agendamento, aviso aos moradores e registro de execução que calcula a próxima data e lança o custo.
+- **Início:** uma frase diz quantas coisas precisam de atenção; abaixo, a lista "Para resolver" separa o que é para agora do que vence nas próximas semanas, cada item com sua ação de um toque (Feito hoje, Renovar, Atualizar, Responder). Ao lado, a agenda da semana e o mural com a porcentagem de unidades que leram cada aviso.
+- **Botão Novo e busca:** registrar chamado, manutenção feita, aviso, gasto ou documento a partir de qualquer tela; busca em tudo com Ctrl K (ou ⌘ K) ou "/".
+- **Chamados:** lista ou quadro por etapa. No detalhe, um único botão leva à próxima etapa (Começar análise, Iniciar conserto, Marcar como resolvido), há respostas prontas para os moradores e a gestão avançada (urgência, fornecedor, equipamento, orçamentos) fica recolhida até ser necessária.
+- **Manutenções:** plano preventivo no espírito da NBR 5674 (o que, a cada quanto tempo, quem faz), "Feito hoje" com um toque para o que está atrasado ou vencendo, agendamento, aviso aos moradores e registro detalhado quando precisar.
 - **Equipamentos:** ficha com garantia, responsável, plano, chamados e documentos de cada sistema do prédio.
 - **Fornecedores:** contatos para copiar, contrato e vigência, avaliação e histórico de serviços e pagamentos.
 - **Documentos:** AVCB, laudos, certificados, contratos, atas e prestações de contas, com alerta 60 dias antes de vencer, renovação e controle de quem pode ver.
 - **Custos:** gasto mensal contra o orçamento, relação entre corretiva e preventiva, categorias, fornecedores e lançamentos ligados à origem.
 
 ### Condômino
-- **Início:** convite para relatar problema, avisos com "Estou ciente", meus chamados com as etapas, agenda do prédio e para onde foi o dinheiro no mês.
-- **Relatar problema em 3 passos:** categoria, local e detalhes com foto. Se já existir um chamado parecido, o app sugere apoiar o existente em vez de duplicar.
+- **Início:** convite para relatar problema, só os avisos ainda não lidos em destaque (os lidos ficam recolhidos), meus chamados com as etapas, agenda do prédio e o gasto do mês contado em uma frase.
+- **Relatar problema em 3 passos:** categoria, local (as áreas mais prováveis para cada tipo de problema aparecem primeiro) e o que você viu, com foto. A primeira frase vira o título, sem campo extra. Se já existir um chamado parecido, o app sugere apoiar o existente em vez de duplicar.
 - **Chamados:** os meus e os que estão abertos no prédio, com o botão "Também me afeta".
 - **Confirmação:** quando a síndica resolve, o morador confirma ou reabre o chamado.
 - **Documentos e Transparência:** documentos públicos e os mesmos números de gastos que a síndica vê, inclusive o custo por unidade.
@@ -45,6 +46,7 @@ js/data.js            Catálogos e dados de exemplo
 js/store.js           Estado, persistência local, consultas e ações (com desfazer)
 js/ui.js              Folha lateral/inferior, avisos rápidos, formulários, validação
 js/app.js             Navegação por perfil, rotas e eventos globais
+js/quick.js           Botão Novo, registrar manutenção feita e busca global
 js/views/*.js         Telas: entrada, início, chamados, manutenções, equipamentos,
                       fornecedores, documentos, custos
 docs/pesquisa-ux.md   Hipóteses de pesquisa, dores, oportunidades, roteiro de

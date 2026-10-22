@@ -168,9 +168,12 @@
       }
     },
 
+    /** Foca o título (anunciado por leitores de tela) ou o campo indicado em spec.focus. */
     focusTitle() {
-      const h = this.el && this.el.querySelector('#sheet-title');
-      if (h) h.focus({ preventScroll: true });
+      if (!this.el) return;
+      const spec = this.top();
+      const target = (spec && spec.focus && this.el.querySelector(spec.focus)) || this.el.querySelector('#sheet-title');
+      if (target) target.focus({ preventScroll: true });
     },
 
     close() {
@@ -255,6 +258,73 @@
       Sheet.trapTab(e);
     }
   });
+
+  /* ---------- Menu suspenso (computador) ---------- */
+
+  const Popover = (CO.Popover = {
+    el: null,
+    anchor: null,
+    isOpen() {
+      return !!this.el;
+    },
+    open(anchor, html) {
+      this.close(false);
+      const el = document.createElement('div');
+      el.className = 'popover';
+      el.setAttribute('role', 'menu');
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      const r = anchor.getBoundingClientRect();
+      const w = el.offsetWidth;
+      const left = Math.min(r.left, window.innerWidth - w - 12);
+      const below = r.bottom + 8 + el.offsetHeight < window.innerHeight;
+      el.style.left = `${Math.max(12, left)}px`;
+      el.style.top = below ? `${r.bottom + 8}px` : `${r.top - el.offsetHeight - 8}px`;
+      el.style.transformOrigin = `${r.left + r.width / 2 - left}px ${below ? 'top' : 'bottom'}`;
+      this.el = el;
+      this.anchor = anchor;
+      anchor.setAttribute('aria-expanded', 'true');
+      requestAnimationFrame(() => el.classList.add('is-open'));
+      const first = el.querySelector('button');
+      if (first) first.focus({ preventScroll: true });
+    },
+    close(restore = true) {
+      if (!this.el) return;
+      const el = this.el;
+      this.el = null;
+      el.classList.remove('is-open');
+      setTimeout(() => el.remove(), 140);
+      if (this.anchor) {
+        this.anchor.setAttribute('aria-expanded', 'false');
+        if (restore) this.anchor.focus({ preventScroll: true });
+      }
+    },
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!Popover.isOpen()) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      Popover.close();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const items = CO.$$('button', Popover.el);
+      const i = items.indexOf(document.activeElement);
+      const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+      items[next].focus();
+    }
+  });
+
+  /** Recolhe a linha antes de concluir a ação, para mostrar que o item saiu da lista. */
+  CO.animateOut = (el, fn) => {
+    if (!el || CO.reducedMotion()) return fn();
+    el.style.height = `${el.offsetHeight}px`;
+    el.style.overflow = 'hidden';
+    void el.offsetHeight;
+    el.classList.add('is-leaving');
+    el.style.height = '0px';
+    setTimeout(fn, 260);
+  };
 
   /** Confirmação dentro da própria interface (o visualizador não exibe confirm()). */
   CO.confirm = ({ title, text, confirmLabel, danger, onConfirm }) => {

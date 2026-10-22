@@ -227,31 +227,56 @@
       </section>`;
   };
 
+  // Próxima etapa natural de cada situação, com a mensagem que os moradores recebem
+  const NEXT = {
+    aberto: { to: 'analise', label: 'Começar análise', ic: 'hourglass-medium', note: 'Recebido. Estou verificando o problema.' },
+    analise: { to: 'andamento', label: 'Iniciar conserto', ic: 'wrench', note: 'O conserto foi iniciado.' },
+    andamento: { to: 'resolvido', label: 'Marcar como resolvido', ic: 'check-circle' },
+  };
+
+  const QUICK_REPLIES = ['Recebido, estou verificando.', 'Pedi orçamento ao fornecedor.', 'Visita técnica agendada para ', 'Aguardando peça.', 'Serviço concluído.'];
+
   const ticketBody = (id) => () => {
     const t = Store.ticket(id);
     const sind = Store.isSindico();
     const me = Store.me().id;
     const mine = t.createdBy === me;
     const supported = t.supporters.includes(me);
-    const idx = K.STATUS_ORDER.indexOf(t.status);
-    const steps = CO.stepper(t);
-    const updates = t.updates.filter((u) => sind || u.visibility === 'public');
+    const updates = t.updates.filter((u) => sind || u.visibility === 'public').slice().reverse();
     const eq = t.equipmentId ? Store.equipment(t.equipmentId) : null;
     const canComment = sind || mine || supported;
     const needsFeedback = !sind && mine && t.status === 'resolvido' && !t.feedback;
+    const supplierTxt = t.supplierId
+      ? sind ? `<button class="link-btn" type="button" data-action="open-supplier" data-id="${t.supplierId}">${esc(Store.supplierName(t.supplierId))}</button>` : esc(Store.supplierName(t.supplierId))
+      : 'Ainda não definido';
+    const quoteSummary = t.quotes.length ? `, ${CO.plural(t.quotes.length, 'orçamento', 'orçamentos')}` : '';
 
     const manage = sind
       ? `
-      <section class="detail-section">
-        <h3>Gestão</h3>
-        ${F.seg({ name: 'tk-status', id: 'f-tk-status', label: 'Situação', value: t.status, change: 'ticket-status', data: ` data-id="${t.id}"`, options: K.STATUS_ORDER.map((st) => ({ value: st, label: K.TICKET_STATUS[st].label })) })}
-        ${F.seg({ name: 'tk-urg', id: 'f-tk-urg', label: 'Urgência', value: t.urgency, change: 'ticket-urgency', data: ` data-id="${t.id}"`, options: Object.entries(K.URGENCY).map(([value, u]) => ({ value, label: u.short })) })}
-        <div class="field-row">
-          ${F.select({ name: 'tk-sup', id: 'f-tk-sup', label: 'Fornecedor responsável', placeholder: 'Nenhum ainda', value: t.supplierId, change: 'ticket-supplier', data: ` data-id="${t.id}"`, options: Store.s.suppliers.map((s) => ({ value: s.id, label: s.name })) })}
-          ${F.select({ name: 'tk-eq', id: 'f-tk-eq', label: 'Equipamento', placeholder: 'Nenhum', value: t.equipmentId, change: 'ticket-equipment', data: ` data-id="${t.id}"`, options: Store.s.equipment.map((e) => ({ value: e.id, label: e.name })) })}
+      <details class="disclosure" id="mgmt-${t.id}"${ui.mgmtOpen ? ' open' : ''}>
+        <summary>${icon('caret-right', 'disclosure-caret')}<span class="summary-label">Gestão do chamado</span><span class="disclosure-sum">${esc(K.URGENCY[t.urgency].short)}${t.supplierId ? `, ${esc(Store.supplierName(t.supplierId))}` : ''}${quoteSummary}</span></summary>
+        <div class="stack">
+          ${F.seg({ name: 'tk-status', id: 'f-tk-status', label: 'Situação', value: t.status, change: 'ticket-status', data: ` data-id="${t.id}"`, options: K.STATUS_ORDER.map((st) => ({ value: st, label: K.TICKET_STATUS[st].label })) })}
+          ${F.seg({ name: 'tk-urg', id: 'f-tk-urg', label: 'Urgência', value: t.urgency, change: 'ticket-urgency', data: ` data-id="${t.id}"`, options: Object.entries(K.URGENCY).map(([value, u]) => ({ value, label: u.short })) })}
+          <div class="field-row">
+            ${F.select({ name: 'tk-sup', id: 'f-tk-sup', label: 'Fornecedor responsável', placeholder: 'Nenhum ainda', value: t.supplierId, change: 'ticket-supplier', data: ` data-id="${t.id}"`, options: Store.s.suppliers.map((s) => ({ value: s.id, label: s.name })) })}
+            ${F.select({ name: 'tk-eq', id: 'f-tk-eq', label: 'Equipamento', placeholder: 'Nenhum', value: t.equipmentId, change: 'ticket-equipment', data: ` data-id="${t.id}"`, options: Store.s.equipment.map((e) => ({ value: e.id, label: e.name })) })}
+          </div>
+          ${quoteBlock(t)}
         </div>
-      </section>
-      ${quoteBlock(t)}`
+      </details>`
+      : '';
+
+    const composer = canComment
+      ? `
+        <form class="form composer" id="upd-form" data-form="ticket-update" data-id="${t.id}" novalidate>
+          ${sind ? `<div class="quick-replies" role="group" aria-label="Respostas prontas">${QUICK_REPLIES.map((q) => `<button class="chip chip-sm" type="button" data-action="quick-reply" data-v="${esc(q)}" data-target="f-upd-${t.id}">${esc(q.trim())}</button>`).join('')}</div>` : ''}
+          ${F.textarea({ name: 'text', id: `f-upd-${t.id}`, label: sind ? 'Escrever aos moradores' : 'Adicionar informação', rows: 2, keep: true, required: 'Escreva a mensagem antes de enviar.', placeholder: sind ? 'Ex.: O técnico vem amanhã às 14h.' : 'Ex.: Piorou hoje de manhã.' })}
+          <div class="composer-actions">
+            ${sind ? F.toggle({ name: 'public', id: `f-upd-pub-${t.id}`, label: 'Moradores veem', checked: true }) : '<span></span>'}
+            <button class="btn btn-secondary btn-sm" type="submit">${icon('paper-plane-tilt')}Enviar</button>
+          </div>
+        </form>`
       : '';
 
     return `
@@ -260,49 +285,71 @@
         ${needsFeedback ? `
           <div class="callout tone-accent">${icon('seal-check')}<div><strong>A síndica marcou como resolvido.</strong><div>O problema foi resolvido mesmo?</div>
           <div class="callout-actions"><button class="btn btn-primary btn-sm" type="button" data-action="ticket-feedback" data-id="${t.id}" data-ok="1">${icon('check')}Sim, resolvido</button><button class="btn btn-secondary btn-sm" type="button" data-action="ticket-feedback" data-id="${t.id}" data-ok="0">Ainda não</button></div></div></div>` : ''}
-        ${steps}
+        ${CO.stepper(t)}
         <dl class="kv">
           <div class="fact"><dt>Local</dt><dd>${esc(CO.locationLabel(t.location))}</dd></div>
-          <div class="fact"><dt>Aberto por</dt><dd>${esc(mine ? 'Você' : Store.userLabel(t.createdBy))}</dd></div>
-          <div class="fact"><dt>Aberto em</dt><dd>${CO.dateNum(t.createdAt)}, ${CO.time(t.createdAt)}</dd></div>
+          <div class="fact"><dt>Aberto por</dt><dd>${esc(mine ? 'Você' : Store.userLabel(t.createdBy))}, ${CO.ago(t.createdAt)}</dd></div>
           <div class="fact"><dt>Afetados</dt><dd>${CO.plural(affected(t), 'morador', 'moradores')}</dd></div>
-          ${t.supplierId && !sind ? `<div class="fact"><dt>Fornecedor</dt><dd>${esc(Store.supplierName(t.supplierId))}</dd></div>` : ''}
+          <div class="fact"><dt>Fornecedor</dt><dd>${supplierTxt}</dd></div>
           ${eq ? `<div class="fact"><dt>Equipamento</dt><dd>${sind ? `<button class="link-btn" type="button" data-action="open-equip" data-id="${eq.id}">${esc(eq.name)}</button>` : esc(eq.name)}</dd></div>` : ''}
         </dl>
         ${t.photo ? `<div class="photo"><img src="${t.photo}" alt="Foto enviada com o chamado"></div>` : ''}
-        <section class="detail-section"><h3>Descrição</h3><p class="desc">${esc(t.description)}</p></section>
+        <p class="desc desc-quote">${esc(t.description)}</p>
         ${!sind && !mine && Store.isOpen(t) ? `<button class="btn ${supported ? 'btn-ghost' : 'btn-secondary'}" type="button" data-action="ticket-support" data-id="${t.id}" aria-pressed="${supported}">${icon(supported ? 'check' : 'hand-pointing')}${supported ? 'Você apoiou este chamado' : 'Também me afeta'}</button>` : ''}
         ${manage}
         <section class="detail-section">
-          <h3>Atualizações</h3>
+          <h3>Conversa</h3>
+          ${composer}
           <ol class="timeline">${updates.map(timelineItem).join('')}</ol>
-          ${canComment ? `
-            <form class="form" id="upd-form" data-form="ticket-update" data-id="${t.id}" novalidate style="margin-top:8px">
-              ${F.textarea({ name: 'text', id: `f-upd-${t.id}`, label: sind ? 'Nova atualização' : 'Adicionar informação', rows: 3, keep: true, required: 'Escreva a atualização antes de publicar.', placeholder: sind ? 'Ex.: O técnico vem amanhã às 14h.' : 'Ex.: Piorou hoje de manhã.' })}
-              ${sind ? F.toggle({ name: 'public', id: `f-upd-pub-${t.id}`, label: 'Visível para os moradores', hint: 'Desligue para anotações internas, como valores ou negociação.', checked: true }) : ''}
-              <button class="btn btn-secondary" type="submit" style="align-self:flex-start">${icon('paper-plane-tilt')}Publicar</button>
-            </form>` : ''}
         </section>
       </div>`;
   };
 
-  CO.openTicket = (id) => {
+  CO.openTicket = (id, { focus } = {}) => {
     const t = Store.ticket(id);
     if (!t) return;
     const spec = {
       title: t.title,
       eyebrow: `<span class="mono">${t.id}</span>`,
       live: true,
+      focus,
       body: ticketBody(id),
-      foot: Store.isSindico() && Store.isOpen(t)
-        ? () => (Store.isOpen(Store.ticket(id)) ? `<button class="btn btn-primary" type="button" data-action="resolve-ticket" data-id="${id}">${icon('check-circle')}Marcar como resolvido</button>` : '')
+      foot: Store.isSindico()
+        ? () => {
+            const n = NEXT[Store.ticket(id).status];
+            return n ? `<button class="btn btn-primary" type="button" data-action="ticket-next" data-id="${id}">${icon(n.ic)}${n.label}</button>` : '';
+          }
         : null,
+      mount: (root) => {
+        const d = root.querySelector('details.disclosure');
+        if (d) d.addEventListener('toggle', () => { ui.mgmtOpen = d.open; });
+      },
     };
     if (CO.Sheet.isOpen()) CO.Sheet.push(spec);
     else CO.Sheet.open(spec);
   };
 
   CO.actions['open-ticket'] = (el) => CO.openTicket(el.dataset.id);
+  CO.actions['ticket-reply'] = (el) => CO.openTicket(el.dataset.id, { focus: `#f-upd-${el.dataset.id}` });
+
+  CO.actions['ticket-next'] = (el) => {
+    const id = el.dataset.id;
+    const n = NEXT[Store.ticket(id).status];
+    if (!n) return;
+    if (n.to === 'resolvido') return CO.actions['resolve-ticket'](el);
+    Store.setTicketStatus(id, n.to, n.note);
+    CO.done(`${K.TICKET_STATUS[n.to].label}. Quem acompanha o chamado foi avisado.`);
+  };
+
+  CO.actions['quick-reply'] = (el) => {
+    const ta = document.getElementById(el.dataset.target);
+    if (!ta) return;
+    const v = el.dataset.v;
+    ta.value = ta.value.trim() ? `${ta.value.trim()} ${v}` : v;
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  };
 
   CO.actions['ticket-support'] = (el) => {
     const on = Store.toggleSupport(el.dataset.id);
@@ -403,12 +450,13 @@
       createdId: null,
     };
 
-    const stepLabel = (n) => `<p class="steps-label">Passo ${n} de 3</p>`;
+    const stepLabel = (n) => `
+      <div class="wz-progress" role="img" aria-label="Passo ${n} de 3">${[1, 2, 3].map((i) => `<span class="${i <= n ? 'is-on' : ''}"></span>`).join('')}</div>`;
 
     const step1 = () => `
       <div class="stack">
-        <div class="callout tone-crit">${icon('siren')}<div><strong>Risco imediato?</strong> Gás, fogo, alguém preso no elevador ou alagamento: ligue antes para a portaria, <strong class="num">${esc(Store.s.condo.porterPhone)}</strong>.</div></div>
         ${stepLabel(1)}
+        <div class="callout tone-crit callout-compact">${icon('siren')}<div><strong>Risco imediato?</strong> Gás, fogo, alguém preso no elevador ou alagamento: ligue antes para a portaria, <strong class="num">${esc(Store.s.condo.porterPhone)}</strong>.</div></div>
         <div class="cat-grid" role="group" aria-label="Tipo de problema">
           ${K.TICKET_CATS.map((c) => `<button class="cat-tile" type="button" data-wz="cat" data-v="${c.id}" aria-pressed="${draft.category === c.id}">${icon(c.icon)}<span>${esc(c.label)}</span></button>`).join('')}
         </div>
@@ -421,7 +469,7 @@
         ${draft.locType === 'common'
           ? `<fieldset class="fieldset-plain">
               <legend class="label">Qual área?</legend>
-              <div class="area-chips">${K.AREAS.map((a) => `<button class="chip" type="button" data-wz="area" data-v="${esc(a)}" aria-pressed="${draft.area === a}">${esc(a)}</button>`).join('')}</div>
+              ${areaChips()}
               <p class="error" id="f-wz-area-err" hidden></p>
             </fieldset>
             ${F.text({ name: 'detail', id: 'f-wz-detail', label: 'Complemento', optional: true, value: draft.detail, placeholder: 'Ex.: 3º andar, perto do elevador' })}`
@@ -429,6 +477,38 @@
             ? F.select({ name: 'unit', id: 'f-wz-unit', label: 'Unidade', placeholder: 'Escolha a unidade', value: draft.unit, options: K.UNITS.map((u) => ({ value: u, label: u })) }) + '<p class="error" id="f-wz-unit-err" hidden></p>'
             : `<p class="callout">${icon('info')}<span>Problemas dentro do apartamento normalmente são de responsabilidade do morador. A síndica avalia se envolve a estrutura do prédio, como prumadas, fiação comum ou infiltração vinda de outra unidade.</span></p>`}
       </div>`;
+
+    // Áreas mais prováveis para cada tipo de problema aparecem primeiro; as demais ficam recolhidas
+    const SUGGEST = {
+      eletrica: ['Escadas e corredores', 'Garagem (subsolo)', 'Hall de entrada Bloco A', 'Hall de entrada Bloco B'],
+      hidraulica: ['Garagem (subsolo)', 'Casa de bombas', 'Cobertura e telhado', 'Escadas e corredores'],
+      elevador: ['Elevador Bloco A', 'Elevador Bloco B'],
+      portao: ['Portão da garagem', 'Portaria'],
+      seguranca: ['Portaria', 'Portão da garagem', 'Garagem (subsolo)'],
+      interfone: ['Portaria'],
+      estrutura: ['Fachada', 'Cobertura e telhado', 'Garagem (subsolo)', 'Salão de festas'],
+      limpeza: ['Área de lixo', 'Escadas e corredores', 'Garagem (subsolo)'],
+      jardim: ['Jardim frontal', 'Playground', 'Piscina'],
+    };
+    const chip = (a) => `<button class="chip" type="button" data-wz="area" data-v="${esc(a)}" aria-pressed="${draft.area === a}">${esc(a)}</button>`;
+    const areaChips = () => {
+      const top = SUGGEST[draft.category] || [];
+      if (!top.length) return `<div class="area-chips">${K.AREAS.map(chip).join('')}</div>`;
+      const rest = K.AREAS.filter((a) => !top.includes(a));
+      const restOpen = draft.area && !top.includes(draft.area);
+      return `
+        <div class="area-chips">${top.map(chip).join('')}</div>
+        <details class="disclosure disclosure-inline"${restOpen ? ' open' : ''}>
+          <summary>${icon('caret-right', 'disclosure-caret')}Outras áreas</summary>
+          <div class="area-chips">${rest.map(chip).join('')}</div>
+        </details>`;
+    };
+
+    const deriveTitle = (desc) => {
+      let t = desc.split(/[.!?\n]/)[0].trim() || desc.trim();
+      if (t.length > 72) t = `${t.slice(0, 72).replace(/\s+\S*$/, '')}…`;
+      return t.charAt(0).toUpperCase() + t.slice(1);
+    };
 
     const similarHtml = () => {
       if (draft.locType !== 'common') return '';
@@ -455,13 +535,24 @@
       <form class="form" id="wz-form" novalidate>
         ${stepLabel(3)}
         ${similarHtml()}
-        ${F.text({ name: 'title', id: 'f-wz-title', label: 'Resumo do problema', value: draft.title, maxlength: 80, required: 'Escreva uma frase curta sobre o problema.', placeholder: 'Ex.: Lâmpada queimada no corredor do 3º andar' })}
-        ${F.textarea({ name: 'description', id: 'f-wz-desc', label: 'Detalhes', value: draft.description, rows: 4, required: 'Conte o que você viu para a síndica entender o problema.', hint: 'O que você viu, desde quando e se piora em algum horário.' })}
+        ${F.textarea({ name: 'description', id: 'f-wz-desc', label: 'O que você viu?', value: draft.description, rows: 4, required: 'Conte em poucas palavras o que você viu.', placeholder: PLACEHOLDER[draft.category] || 'Ex.: Desde ontem, toda vez que...', hint: 'A primeira frase vira o título do chamado.' })}
         ${F.choices({ name: 'urgency', id: 'f-wz-urg', label: 'Quanto isso atrapalha?', value: draft.urgency, required: 'Escolha a urgência.', options: Object.entries(K.URGENCY).map(([value, u]) => ({ value, label: u.label, hint: u.hint })) })}
         ${draft.photo
           ? `<div class="field"><span class="label">Foto</span><div class="photo-preview"><img src="${draft.photo}" alt="Prévia da foto anexada"><button class="btn-icon" type="button" data-wz="photo-remove" aria-label="Remover foto">${icon('trash')}</button></div></div>`
           : F.file({ name: 'photo', id: 'f-wz-photo', label: 'Foto', optional: true, accept: 'image/*', icon: 'camera', text: 'Tirar ou escolher uma foto', hint: 'Uma foto ajuda o fornecedor a chegar com a peça certa.' })}
       </form>`;
+
+    const PLACEHOLDER = {
+      eletrica: 'Ex.: A lâmpada do corredor do 3º andar queimou. À noite fica escuro.',
+      hidraulica: 'Ex.: Está pingando água do teto perto da vaga 22.',
+      elevador: 'Ex.: O elevador está parando abaixo do andar.',
+      portao: 'Ex.: O portão demora quase um minuto para fechar.',
+      seguranca: 'Ex.: A câmera da entrada está sem imagem desde sábado.',
+      interfone: 'Ex.: Ouço a portaria, mas eles não me ouvem.',
+      estrutura: 'Ex.: Apareceu uma mancha de umidade na parede.',
+      limpeza: 'Ex.: A lixeira de recicláveis está quebrada.',
+      jardim: 'Ex.: Um galho está encostando na fiação.',
+    };
 
     const success = () => {
       const t = Store.ticket(draft.createdId);
@@ -503,7 +594,6 @@
 
     const capture = (e) => {
       const el = e.target;
-      if (el.name === 'title') draft.title = el.value;
       if (el.name === 'description') draft.description = el.value;
       if (el.name === 'detail') draft.detail = el.value;
       if (el.name === 'unit') draft.unit = el.value;
@@ -540,10 +630,13 @@
       const kind = b.dataset.wz;
       if (kind === 'cat') {
         draft.category = b.dataset.v;
+        if (draft.category === 'interfone' && !sind) draft.locType = 'unit';
+        const top = SUGGEST[draft.category] || [];
+        if (top.length === 1 && draft.locType === 'common') draft.area = top[0];
         go(2);
       } else if (kind === 'area') {
         draft.area = b.dataset.v;
-        CO.$$('[data-wz="area"]', b.parentElement).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        CO.$$('[data-wz="area"]', b.closest('fieldset')).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
         const err = document.getElementById('f-wz-area-err');
         if (err) err.hidden = true;
       } else if (kind === 'back') {
@@ -567,7 +660,7 @@
         const location = draft.locType === 'common'
           ? { type: 'common', area: draft.area, detail: draft.detail }
           : { type: 'unit', area: `Unidade ${draft.unit}`, detail: '' };
-        draft.createdId = Store.addTicket({ title: draft.title, description: draft.description, category: draft.category, urgency: draft.urgency, location, photo: draft.photo, equipmentId: draft.equipmentId });
+        draft.createdId = Store.addTicket({ title: deriveTitle(draft.description), description: draft.description, category: draft.category, urgency: draft.urgency, location, photo: draft.photo, equipmentId: draft.equipmentId });
         go(4);
       } else if (kind === 'track') {
         const id = draft.createdId;

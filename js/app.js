@@ -12,19 +12,19 @@
 
   const NAV = {
     sindico: [
-      { id: 'inicio', label: 'Início', icon: 'house' },
-      { id: 'chamados', label: 'Chamados', icon: 'chat-circle-text', count: (c) => [c.openTickets, false] },
-      { id: 'manutencoes', label: 'Manutenções', icon: 'wrench', count: (c) => [c.latePlans, true] },
-      { id: 'equipamentos', label: 'Equipamentos', icon: 'gauge' },
-      { id: 'fornecedores', label: 'Fornecedores', icon: 'handshake' },
-      { id: 'documentos', label: 'Documentos', icon: 'folder', count: (c) => [c.docsAction, c.docsExpired > 0] },
-      { id: 'custos', label: 'Custos', icon: 'chart-bar' },
+      { id: 'inicio', label: 'Início', icon: 'house', group: 'Dia a dia' },
+      { id: 'chamados', label: 'Chamados', icon: 'chat-circle-text', count: (c) => [c.openTickets, false], group: 'Dia a dia' },
+      { id: 'manutencoes', label: 'Manutenções', icon: 'wrench', count: (c) => [c.latePlans, true], group: 'Dia a dia' },
+      { id: 'equipamentos', label: 'Equipamentos', icon: 'gauge', group: 'Prédio' },
+      { id: 'fornecedores', label: 'Fornecedores', icon: 'handshake', group: 'Prédio' },
+      { id: 'documentos', label: 'Documentos', icon: 'folder', count: (c) => [c.docsAction, c.docsExpired > 0], group: 'Prédio' },
+      { id: 'custos', label: 'Custos', icon: 'chart-bar', group: 'Dinheiro' },
     ],
     morador: [
-      { id: 'inicio', label: 'Início', icon: 'house' },
-      { id: 'chamados', label: 'Chamados', icon: 'chat-circle-text' },
-      { id: 'documentos', label: 'Documentos', icon: 'folder' },
-      { id: 'custos', label: 'Transparência', icon: 'chart-bar' },
+      { id: 'inicio', label: 'Início', icon: 'house', group: 'Meu condomínio' },
+      { id: 'chamados', label: 'Chamados', icon: 'chat-circle-text', group: 'Meu condomínio' },
+      { id: 'documentos', label: 'Documentos', icon: 'folder', group: 'Meu condomínio' },
+      { id: 'custos', label: 'Transparência', icon: 'chart-bar', group: 'Meu condomínio' },
     ],
   };
   const TABS = {
@@ -133,6 +133,12 @@
                 <div class="brand-sub">${esc(Store.s.condo.name)}</div>
               </div>
             </div>
+            <div class="side-actions">
+              ${role === 'sindico'
+                ? `<button class="btn btn-primary btn-block" type="button" data-action="open-new" aria-haspopup="menu" aria-expanded="false">${icon('plus')}Novo</button>`
+                : `<button class="btn btn-primary btn-block" type="button" data-action="new-ticket">${icon('plus')}Relatar problema</button>`}
+              <button class="search-trigger" type="button" data-action="open-search">${icon('magnifying-glass')}<span>Buscar</span><kbd>${CO.shortcutLabel()}</kbd></button>
+            </div>
             <nav class="nav" id="side-nav" aria-label="Seções"></nav>
             <div class="sidebar-foot">
               <button class="me-card" type="button" data-action="open-profile">
@@ -145,10 +151,14 @@
           <div class="main">
             <header class="topbar">
               <div class="topbar-brand">${CO.brandMark()}<span class="topbar-title" id="topbar-title"></span></div>
+              <button class="btn-icon" type="button" data-action="open-search" aria-label="Buscar">${icon('magnifying-glass')}</button>
               <button class="avatar-btn" type="button" data-action="open-profile" aria-label="Perfil e configurações">${CO.avatar(me.name)}</button>
             </header>
             <main class="content" id="view"></main>
           </div>
+          ${role === 'sindico'
+            ? `<button class="fab" id="fab" type="button" data-action="open-new" aria-label="Novo: chamado, manutenção, aviso, gasto ou documento">${icon('plus')}</button>`
+            : `<button class="fab fab-wide" id="fab" type="button" data-action="new-ticket">${icon('plus')}<span>Relatar problema</span></button>`}
           <nav class="tabbar" id="tabbar" aria-label="Seções"></nav>
         </div>`;
     },
@@ -156,14 +166,19 @@
     renderNav(role) {
       const c = Store.counts();
       const unread = Store.s.notices.filter((n) => !n.readBy.includes(Store.me().unit)).length;
+      let lastGroup = null;
       const side = NAV[role]
         .map((n) => {
           const [num, crit] = n.count ? n.count(c) : [0, false];
           const cur = n.id === this.route ? ' aria-current="page"' : '';
-          return `<a class="nav-link" href="#${n.id}" data-go="${n.id}"${cur}>${icon(n.id === this.route ? n.icon + '-fill' : n.icon)}<span>${esc(n.label)}</span>${num ? `<span class="count${crit ? ' is-crit' : ''}">${num}</span>` : ''}</a>`;
+          const label = n.group !== lastGroup ? `<p class="nav-label">${esc(n.group)}</p>` : '';
+          lastGroup = n.group;
+          return `${label}<a class="nav-link" href="#${n.id}" data-go="${n.id}"${cur}>${icon(n.id === this.route ? n.icon + '-fill' : n.icon)}<span>${esc(n.label)}</span>${num ? `<span class="count${crit ? ' is-crit' : ''}">${num}</span>` : ''}</a>`;
         })
         .join('');
-      document.getElementById('side-nav').innerHTML = `<p class="nav-label">${role === 'sindico' ? 'Gestão' : 'Meu condomínio'}</p>${side}`;
+      document.getElementById('side-nav').innerHTML = side;
+      // O morador já tem o convite para relatar no Início; o botão flutuante aparece nas outras telas
+      document.getElementById('fab').hidden = role === 'morador' && this.route === 'inicio';
 
       const moreRoutes = ['equipamentos', 'fornecedores', 'documentos'];
       const tabs = TABS[role]
@@ -315,6 +330,12 @@
   /* ---------- Eventos globais ---------- */
 
   document.addEventListener('click', (e) => {
+    if (CO.Popover.isOpen()) {
+      const inside = e.target.closest('.popover');
+      const toggle = e.target.closest('[data-action="open-new"]');
+      if (!inside || e.target.closest('[data-action], [data-go]')) CO.Popover.close();
+      if (toggle && !inside) return;
+    }
     const go = e.target.closest('[data-go]');
     if (go) {
       e.preventDefault();

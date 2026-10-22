@@ -46,6 +46,9 @@ Números em colunas usam `tabular-nums`. Campos de formulário têm 16 px para o
 | Aviso rápido (`CO.toast`) | Confirma toda ação; quando a ação muda dados, oferece "Desfazer" |
 | Formulário (`CO.F`) | Rótulo acima, dica abaixo, erro abaixo com ícone e instrução de correção |
 | Etapas do chamado (`CO.stepper`) | Aberto, Em análise, Andamento, Resolvido |
+| Lista "Para resolver" | Marca de gravidade, título, motivo em uma linha e uma única ação de um toque |
+| Seção recolhível (`.disclosure`) | Esconde o que é avançado ou já lido; o resumo mostra o estado sem abrir |
+| Botão flutuante (`.fab`) | Só no celular; "Novo" para a síndica, "Relatar problema" para o condômino |
 | Gráfico mensal | Um eixo, linha tracejada do orçamento, rótulo direto só no último mês fechado, detalhes ao passar o mouse ou focar |
 
 ## Movimento
@@ -56,6 +59,8 @@ Números em colunas usam `tabular-nums`. Campos de formulário têm 16 px para o
 | Painel lateral e folha | Entra em 420 ms com curva de gaveta, sai em 260 ms pelo mesmo caminho |
 | Troca de passo dentro da folha | 240 ms deslizando 14 px |
 | Troca de página | 220 ms, só opacidade e 6 px de deslocamento |
+| Menu Novo (computador) | Cresce a partir do botão, 180 ms |
+| Item concluído na lista | Desliza 12 px e recolhe em 260 ms antes de sair, mostrando que foi resolvido |
 
 Com "reduzir movimento" ativado, tudo vira troca de opacidade. Efeitos de passar o mouse só valem em dispositivos com mouse.
 
