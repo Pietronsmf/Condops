@@ -1,0 +1,13 @@
+{
+  "name": "condops",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP do CondOps: gestão operacional de condomínios para síndicos e condôminos.",
+  "scripts": {
+    "start": "npx --yes serve .",
+    "icons": "node tools/build-icons.mjs"
+  },
+  "devDependencies": {
+    "@phosphor-icons/core": "2.1.1"
+  }
+}
